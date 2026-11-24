@@ -6,31 +6,54 @@ from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+WALKS_CSV = Path(__file__).parent / "walks.csv"
 
 @dataclass
 class Walk:
     """Provided: one walk from the log, cleaned. `steps` is a whole number, 0 or more."""
-
     date: str
     steps: int
     place: str
 
 
 def parse_walk(row: dict[str, str]) -> Walk:
-    """Turn one row of the CSV file into a Walk, or raise ValueError if the row is bad."""
-    raise NotImplementedError("core: clean one row into a Walk, or raise ValueError for a bad row")
-
+    # row = {"date": "2026-11-16", "steps": " 3100 ", "place": " campus "}
+    date = row["date"].strip()
+    print(date)
+    if len(date) == 0:
+        raise ValueError
+    step = int(row["steps"])
+    print(step)
+    if step < 0:
+        raise ValueError(f'steps is below o: {step}')
+    place = row["place"].strip()
+    print(place)
+    if len(place) == 0:
+        raise ValueError
+    return Walk(date, step, place)
+    
 
 def none_on_error(func: Callable) -> Callable:
-    """A decorator: the wrapped function returns None instead of raising ValueError."""
-    raise NotImplementedError("core: wrap func so that a ValueError becomes None")
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except:
+            return None
+    return wrapper
 
 
 def read_rows(path: Path) -> Iterator[dict[str, str]]:
-    """Yield the rows of a CSV file one at a time, each as a dict of text."""
-    raise NotImplementedError("core: open the CSV file and yield its rows one at a time")
+    with open(path, encoding="utf-8", newline="") as file:
+        for row in csv.DictReader(file):
+            yield row
 
 
 def good_walks(rows: Iterable[dict[str, str]]) -> Iterator[Walk]:
-    """Yield a Walk for every good row, one at a time, and skip the bad rows."""
-    raise NotImplementedError("core: yield a Walk for each good row and skip the bad ones")
+    parse = none_on_error(parse_walk)
+    for row in rows:
+        walk = parse(row)
+        if walk is not None:
+            yield walk
+
+if __name__ == "__main__":
+    print(none_on_error('abc'))

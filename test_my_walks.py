@@ -8,7 +8,6 @@ import pytest
 
 from walks import Walk, parse_walk
 
-
 @pytest.fixture
 def good_row() -> dict[str, str]:
     """Provided: one good row, as csv.DictReader gives it. Each test gets its own new copy."""
@@ -21,3 +20,56 @@ def test_core_example_a_good_row_becomes_a_walk(good_row):
 
 
 # Your tests go here.
+
+def test_steps_with_spaces_are_accepted(good_row):
+    good_row["steps"] = " 3100 "
+    assert parse_walk(good_row).steps == 3100
+
+
+def test_date_and_place_are_stripped(good_row):
+    good_row["date"] = "  2026-11-16 "
+    good_row["place"] = " campus "
+    assert parse_walk(good_row) == Walk("2026-11-16", 4200, "campus")
+
+
+def test_zero_steps_is_a_good_row(good_row):
+    good_row["steps"] = "0"
+    assert parse_walk(good_row).steps == 0
+
+
+def test_one_step_is_a_good_row(good_row):
+    good_row["steps"] = "1"
+    assert parse_walk(good_row).steps == 1
+
+
+def test_minus_one_step_is_bad(good_row):
+    good_row["steps"] = "-1"
+    with pytest.raises(ValueError):
+        parse_walk(good_row)
+
+
+@pytest.mark.parametrize("date", ["", " ", "   "])
+def test_empty_date_is_bad(good_row, date):
+    good_row["date"] = date
+    with pytest.raises(ValueError):
+        parse_walk(good_row)
+
+
+@pytest.mark.parametrize("steps", ["", " ", "abc", "12.5", "-300", "-1", "4 200"])
+def test_bad_steps_are_bad(good_row, steps):
+    good_row["steps"] = steps
+    with pytest.raises(ValueError):
+        parse_walk(good_row)
+
+
+def test_parse_walk_does_not_change_the_row(good_row):
+    good_row["date"] = " 2026-11-16 "
+    good_row["steps"] = " 3100 "
+    good_row["place"] = " campus "
+    before = dict(good_row)
+    parse_walk(good_row)
+    assert good_row == before
+
+
+def test_steps_is_an_int(good_row):
+    assert type(parse_walk(good_row).steps) is int

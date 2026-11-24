@@ -9,31 +9,48 @@ from typing import TextIO
 
 from walks import Walk, good_walks, read_rows
 
-
 def steps_per_day(walks: Iterable[Walk]) -> dict[str, int]:
-    """Total steps for each date, with the dates in order, earliest first."""
-    raise NotImplementedError("core: add up the steps for each date, earliest date first")
+    total: dict[str, int] = {}
+    for walk in walks:
+        total[walk.date] = total.get(walk.date, 0) + walk.steps
+    return {date: total[date] for date in sorted(total)}
 
 
 def best_day(totals: dict[str, int]) -> str:
-    """The date with the most steps. On a tie, the earliest of those dates."""
-    raise NotImplementedError("core: the date with the most steps, the earliest on a tie")
+    if not totals:
+        raise ValueError
+    return min(totals, key=lambda date: (-totals[date], date))
 
 
 @contextmanager
 def saved_safely(path: Path) -> Iterator[TextIO]:
-    """Write to a new file, and put it in place of `path` only if the with block ends without an error."""
-    raise NotImplementedError("core: write to a .tmp file, then replace path only if nothing failed")
-
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as file:
+            yield file
+    except:
+        tmp.unlink(missing_ok=True)
+        raise 
+    tmp.replace(path)
 
 def write_report(path: Path, walks: Iterable[Walk]) -> dict:
-    """Save the week's report to a JSON file, and return it as a dict."""
-    raise NotImplementedError("core: build the report dict, save it with saved_safely, return it")
+    days = steps_per_day(walks)
+    report = {
+        "total_steps": sum(days.values()),
+        "best_day": best_day(days),
+        "days": days
+    }
+    with saved_safely(path) as file:
+        json.dump(report, file, indent=2)
+    return report
 
 
 def load_report(path: Path) -> dict | None:
-    """The report saved last time, or None if there is no file or it is not valid JSON."""
-    raise NotImplementedError("core: load the saved report, or None if it is missing or broken")
+    try:
+        with open(path, encoding="utf-8") as file:
+            return json.load(file)
+    except:
+        return None
 
 
 if __name__ == "__main__":
